@@ -12,19 +12,26 @@ class OpenCVMellstroy:
         self.mellstroy = os.path.basename(mellstroy_photo)
         self.mellstroy_id = 1
         self.is_trained = False
+        self.detected_folder = "detected_faces"
         self.train_model(mellstroy_photo)
 
     def process_train(self, img_path):
         try:
             image = loader(img_path)
             gray_image = grey_convert(image)
-            faces = self.face_detector.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors= 5,minSize= (30,30))
-            for (x, y, w, h) in faces:
+            faces = self.face_detector.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors = 10,minSize= (30,30))
+            for i, (x, y, w, h) in enumerate(faces):
                 face_roi = gray_image[y:y+h, x:x+w]
                 self.face_samples.append(face_roi)
                 self.ids.append(self.mellstroy_id)
+                self.save_detected_face(face_roi, i)
         except Exception as e:
-            print(f"Jib,rf ghb j,hf,jnrt {img_path}: {e}")
+            print(f"ОШибка короче лица не найдены {img_path}: {e}")
+
+    def save_detected_face(self, face_image, face_index):
+        filename = f"face_{face_index + 1}.jpg"
+        save_path = os.path.join(self.detected_folder, filename)
+        cv2.imwrite(save_path, face_image)
                 
     def train_model(self, f_path):
         try:
@@ -43,9 +50,12 @@ class OpenCVMellstroy:
         try:
             user_image = loader(user_path)
             gray_user = grey_convert(user_image)
-            user_faces = self.face_detector.detectMultiScale(gray_user, scaleFactor=1.1, minNeighbors= 5,minSize= (30,30))
+            user_faces = self.face_detector.detectMultiScale(gray_user, scaleFactor=1.1, minNeighbors= 10,minSize= (30,30))
             if len(user_faces) == 0:
                 print("Лица не найдены")
+            for i, (x,y,w,h) in enumerate(user_faces):
+                user_face_roi = gray_user[y:y+h, x:x+w]
+                self.save_detected_face(user_face_roi, i)
             similarity = self.calculate_face_similarity(gray_user, user_faces[0])
             return self.generate_verdict(similarity)
         except Exception as e:
